@@ -755,51 +755,47 @@ def test_maybe_returns_subvalidator_error():
     schema(1)
     schema(2)
 
-    try:
-        # Should trigger a MultipleInvalid exception
-        schema(3)
-    except MultipleInvalid as e:
-        assert_equal(str(e), "value must be at most 2")
-    else:
-        assert False, "Did not raise correct Invalid"
+    with raises(MultipleInvalid, "value must be at most 2"):
+        assert schema(3)
+
+
+def validator_value_not_3(x):
+    if x is 3:
+        raise Invalid("Should not be 3")
+    return x
+
+
+def test_maybe_returns_custom_subvalidator_error():
+    schema = Schema(Maybe(validator_value_not_3))
+
+    # The following should be valid
+    schema(None)
+    schema(1)
+
+    with raises(MultipleInvalid, "Should not be 3"):
+        assert schema(3)
 
 
 def test_schema_empty_list():
     s = Schema([])
     s([])
 
-    try:
-        s([123])
-    except MultipleInvalid as e:
-        assert_equal(str(e), "not a valid value @ data[123]")
-    else:
-        assert False, "Did not raise correct Invalid"
+    with raises(MultipleInvalid, "not a valid value @ data[123]"):
+        assert s([123])
 
-    try:
-        s({'var': 123})
-    except MultipleInvalid as e:
-        assert_equal(str(e), "expected a list")
-    else:
-        assert False, "Did not raise correct Invalid"    
+    with raises(MultipleInvalid, "expected a list"):
+        assert s({'var': 123}) 
 
 
 def test_schema_empty_dict():
     s = Schema({})
     s({})
 
-    try:
-        s({'var': 123})
-    except MultipleInvalid as e:
-        assert_equal(str(e), "extra keys not allowed @ data['var']")
-    else:
-        assert False, "Did not raise correct Invalid"
+    with raises(MultipleInvalid, "extra keys not allowed @ data['var']"):
+        assert s({'var': 123})
 
-    try:
-        s([123])
-    except MultipleInvalid as e:
-        assert_equal(str(e), "expected a dictionary")
-    else:
-        assert False, "Did not raise correct Invalid"
+    with raises(MultipleInvalid, "expected a dictionary"):
+        assert s([123])
 
 
 def test_schema_empty_dict_key():
@@ -807,12 +803,8 @@ def test_schema_empty_dict_key():
     s = Schema({'var': []})
     s({'var': []})
 
-    try:
-        s({'var': [123]})
-    except MultipleInvalid as e:
-        assert_equal(str(e), "not a valid value for dictionary value @ data['var']")
-    else:
-        assert False, "Did not raise correct Invalid"
+    with raises(MultipleInvalid, "not a valid value for dictionary value @ data['var']"):
+        assert s({'var': [123]})
 
 
 def test_schema_decorator_match_with_args():
@@ -1588,14 +1580,11 @@ def test_any_with_discriminant():
             'c-value': bool,
         }, discriminant=lambda value, alternatives: filter(lambda v: v['type'] == value['type'], alternatives))
     })
-    try:
-        schema({
+
+    with raises(MultipleInvalid, "expected bool for dictionary value @ data[\'implementation\'][\'c-value\']"):
+        assert schema({
             'implementation': {
                 'type': 'C',
                 'c-value': None
             }
         })
-    except MultipleInvalid as e:
-        assert_equal(str(e), 'expected bool for dictionary value @ data[\'implementation\'][\'c-value\']')
-    else:
-        assert False, "Did not raise correct Invalid"
